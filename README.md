@@ -6,6 +6,17 @@
 ### Includes basic ERC20 token creation, escrow vault and oraclize API verification.
 Learn more at: https://rublix.io
 
+#### Contract:
+````
+BlueprintAlpha.sol
+````
+
+#### Additional Libraries Required:
+````
+oraclizeAPI.sol
+strings.sol
+````
+
 #### Description
 
 This contract allows the creator to submit a "Blueprint" to the Ethereum network in the form of a smart contract. Other individuals may places "bets" on this contract by sending their ERC20 tokens to it.
