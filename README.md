@@ -17,7 +17,7 @@ oraclizeAPI.sol
 strings.sol
 ````
 
-#### Variables
+#### Variables:
 ````
 1. Expiration
 2. Predicted price
