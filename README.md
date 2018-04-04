@@ -17,6 +17,13 @@ oraclizeAPI.sol
 strings.sol
 ````
 
+#### Variables
+````
+1. Expiration
+2. Predicted price
+3. API to use
+````
+
 #### Description
 
 This contract allows the creator to submit a "Blueprint" to the Ethereum network in the form of a smart contract. Other individuals may places "bets" on this contract by sending their ERC20 tokens to it.
