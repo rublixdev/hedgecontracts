@@ -1,452 +1,739 @@
-pragma solidity ^0.4.18;
+//Rublix Bluprint Factory
+//version 3.0
+//author Adrian Radulescu
+//updated May 29, 2018
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+pragma solidity ^0.4.23;
 
-import "github.com/oraclize/ethereum-api/oraclizeAPI.sol";
-import "github.com/Arachnid/solidity-stringutils/strings.sol";
-
-/**
- * @title ERC20Basic
- * @dev Simpler version of ERC20 interface
- * @dev see https://github.com/ethereum/EIPs/issues/179
- */
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library SafeMath {
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        if (a == 0) {
+            return 0;}
+        uint256 c = a * b;
+        assert(c / a == b);
+        return c;}
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a / b;
+        return c;}
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        assert(b <= a);
+        return a - b;}
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        assert(c >= a);
+        return c;}
+}
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 contract ERC20Basic {
-  uint256 public totalSupply;
-  function balanceOf(address who) public constant returns (uint256);
-  function transfer(address to, uint256 value) public returns (bool);
-  event Transfer(address indexed from, address indexed to, uint256 value);
+    uint256 public totalSupply;
+    function balanceOf(address who) public constant returns (uint256);
+    function transfer(address to, uint256 value) public returns (bool);
+    event Transfer(address indexed from, address indexed to, uint256 value);
 }
-/**
- * @title Ownable
- * @dev The Ownable contract has an owner address, and provides basic authorization control
- * functions, this simplifies the implementation of "user permissions".
- */
-contract Ownable {
-  address public owner;
-  event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-  /**
-   * @dev The Ownable constructor sets the original `owner` of the contract to the sender
-   * account.
-   */
-  function Ownable() {
-    owner = msg.sender;
-  }
-  /**
-   * @dev Throws if called by any account other than the owner.
-   */
-  modifier onlyOwner() {
-    require(msg.sender == owner);
-    _;
-  }
-  /**
-   * @dev Allows the current owner to transfer control of the contract to a newOwner.
-   * @param newOwner The address to transfer ownership to.
-   */
-  function transferOwnership(address newOwner) onlyOwner public {
-    require(newOwner != address(0));
-    OwnershipTransferred(owner, newOwner);
-    owner = newOwner;
-  }
-}
-/**
- * @title Basic token
- * @dev Basic version of StandardToken, with no allowances.
- */
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 contract BasicToken is ERC20Basic {
-  using SafeMath for uint256;
-  mapping(address => uint256) balances;
-  /**
-  * @dev transfer token for a specified address
-  * @param _to The address to transfer to.
-  * @param _value The amount to be transferred.
-  */
-  function transfer(address _to, uint256 _value) public returns (bool) {
-    require(_to != address(0));
-    // SafeMath.sub will throw if there is not enough balance.
-    balances[msg.sender] = balances[msg.sender].sub(_value);
-    balances[_to] = balances[_to].add(_value);
-    Transfer(msg.sender, _to, _value);
-    return true;
-  }
-  /**
-  * @dev Gets the balance of the specified address.
-  * @param _owner The address to query the the balance of.
-  * @return An uint256 representing the amount owned by the passed address.
-  */
-  function balanceOf(address _owner) public constant returns (uint256 balance) {
-    return balances[_owner];
-  }
-}
-/**
- * @title ERC20 interface
- * @dev see https://github.com/ethereum/EIPs/issues/20
- */
-contract ERC20 is ERC20Basic {
-  function allowance(address owner, address spender) public constant returns (uint256);
-  function transferFrom(address from, address to, uint256 value) public returns (bool);
-  function approve(address spender, uint256 value) public returns (bool);
-  event Approval(address indexed owner, address indexed spender, uint256 value);
-}
-/**
- * @title Standard ERC20 token
- *
- * @dev Implementation of the basic standard token.
- * @dev https://github.com/ethereum/EIPs/issues/20
- * @dev Based on code by FirstBlood: https://github.com/Firstbloodio/token/blob/master/smart_contract/FirstBloodToken.sol
- */
-contract StandardToken is ERC20, BasicToken {
-  mapping (address => mapping (address => uint256)) allowed;
-  /**
-   * @dev Transfer tokens from one address to another
-   * @param _from address The address which you want to send tokens from
-   * @param _to address The address which you want to transfer to
-   * @param _value uint256 the amount of tokens to be transferred
-   */
-  function transferFrom(address _from, address _to, uint256 _value) public returns (bool) {
-    require(_to != address(0));
-    uint256 _allowance = allowed[_from][msg.sender];
-    // Check is not needed because sub(_allowance, _value) will already throw if this condition is not met
-    // require (_value <= _allowance);
-    balances[_from] = balances[_from].sub(_value);
-    balances[_to] = balances[_to].add(_value);
-    allowed[_from][msg.sender] = _allowance.sub(_value);
-    Transfer(_from, _to, _value);
-    return true;
-  }
-  /**
-   * @dev Approve the passed address to spend the specified amount of tokens on behalf of msg.sender.
-   *
-   * Beware that changing an allowance with this method brings the risk that someone may use both the old
-   * and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this
-   * race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards:
-   * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-   * @param _spender The address which will spend the funds.
-   * @param _value The amount of tokens to be spent.
-   */
-  function approve(address _spender, uint256 _value) public returns (bool) {
-    allowed[msg.sender][_spender] = _value;
-    Approval(msg.sender, _spender, _value);
-    return true;
-  }
-  /**
-   * @dev Function to check the amount of tokens that an owner allowed to a spender.
-   * @param _owner address The address which owns the funds.
-   * @param _spender address The address which will spend the funds.
-   * @return A uint256 specifying the amount of tokens still available for the spender.
-   */
-  function allowance(address _owner, address _spender) public constant returns (uint256 remaining) {
-    return allowed[_owner][_spender];
-  }
-  /**
-   * approve should be called when allowed[_spender] == 0. To increment
-   * allowed value is better to use this function to avoid 2 calls (and wait until
-   * the first transaction is mined)
-   * From MonolithDAO Token.sol
-   */
-  function increaseApproval (address _spender, uint _addedValue)
-    returns (bool success) {
-    allowed[msg.sender][_spender] = allowed[msg.sender][_spender].add(_addedValue);
-    Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
-    return true;
-  }
-  function decreaseApproval (address _spender, uint _subtractedValue)
-    returns (bool success) {
-    uint oldValue = allowed[msg.sender][_spender];
-    if (_subtractedValue > oldValue) {
-      allowed[msg.sender][_spender] = 0;
-    } else {
-      allowed[msg.sender][_spender] = oldValue.sub(_subtractedValue);
-    }
-    Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
-    return true;
-  }
-}
-
-contract RBLXToken is StandardToken {
-  using SafeMath for uint256;
-
-  // RBLX Token parameters
-  string public name = 'Rublix Token';
-  string public symbol = 'RBLX';
-  uint8 public constant decimals = 18;
-  uint256 public constant decimalFactor = 10 ** uint256(decimals);
-  uint256 public constant totalSupply = 1000000000 * decimalFactor;
-
-
-
-  function RBLXToken(address _owner) public {
-    require(_owner != address(0));
-    balances[_owner] = totalSupply;
-    Transfer(address(0), _owner, totalSupply);
-  }
-
-  function sendToken(address receiver, uint amount,address sender) returns(bool successful){
-	 require(amount <= balances[sender]);
-
-	       // SafeMath.sub will throw if there is not enough balance.
-    balances[sender] = balances[sender].sub(amount);
-    balances[receiver] = balances[receiver].add(amount);
-		Transfer(sender, receiver, amount);
-		return false;
-	}
-
-}
-
-
-
-
-contract EscrowVault is Ownable
-{
-
     using SafeMath for uint256;
-    address public wallet;
     mapping(address => uint256) balances;
 
-    RBLXToken token;
+    function transfer(address _to, uint256 _value) public returns (bool) {
+        require(_to != address(0));
+        require(_value <= balances[msg.sender]);
+        
+        balances[msg.sender] = balances[msg.sender].sub(_value);
+        balances[_to] = balances[_to].add(_value);
+        
+        emit Transfer(msg.sender, _to, _value);
+        return true;}
+    
+    function balanceOf(address _owner) public constant returns (uint256 balance) {
+        return balances[_owner];}
+}
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+contract ERC20 is ERC20Basic {
+    function allowance(address owner, address spender) public constant returns (uint256);
+    function transferFrom(address from, address to, uint256 value) public returns (bool);
+    function approve(address spender, uint256 value) public returns (bool);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+}
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+contract StandardToken is ERC20, BasicToken {
+    mapping (address => mapping (address => uint256)) allowed;
 
-    mapping (address => bool) public isRefunded;
-    event Logrefund(address _useraddress, uint256 _time, uint256 amount);
-    event Logvalutclose(address _wallet, uint256 amount, uint256 time);
-    /**
-     * @param _wallet wallet Address
-     * @param _token tokenaddress
-    */
-    function EscrowVault(address _wallet, RBLXToken _token) public
-    {
-        require(_wallet != address(0));
-        require(_token  != address(0));
-        wallet = _wallet;
-        token=_token;
+    function transferFrom(address _from, address _to, uint256 _value) public returns (bool) {
+        require(_to != address(0));
+        require(_value <= balances[_from]);
+        require(_value <= allowed[_from][msg.sender]);
+    
+        balances[_from] = balances[_from].sub(_value);
+        balances[_to] = balances[_to].add(_value);
+        allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
+        emit Transfer(_from, _to, _value);
+        return true;}
+  
+    function approve(address _spender, uint256 _value) public returns (bool) {
+        allowed[msg.sender][_spender] = _value;
+        emit Approval(msg.sender, _spender, _value);
+        return true;}
+
+    function allowance(address _owner, address _spender) public constant returns (uint256 remaining) {
+        return allowed[_owner][_spender];}
+
+    function increaseApproval (address _spender, uint _addedValue) public returns (bool success) {
+        allowed[msg.sender][_spender] = allowed[msg.sender][_spender].add(_addedValue);
+        emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
+        return true;}
+        
+    function decreaseApproval (address _spender, uint _subtractedValue) public returns (bool success) {
+        uint oldValue = allowed[msg.sender][_spender];
+        
+        if (_subtractedValue > oldValue) {
+            allowed[msg.sender][_spender] = 0;} 
+        else {
+            allowed[msg.sender][_spender] = oldValue.sub(_subtractedValue);}
+        
+        emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
+        return true;}
+}
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+contract RublixToken is StandardToken {
+
+    string public name;
+    string public symbol;
+    uint256 public decimals = 18;
+    address public creator;
+     
+    event Burn(address indexed from, uint256 value);
+
+    constructor (uint256 initialSupply, address _creator) public {
+        require (msg.sender == _creator);
+            
+        creator=_creator;
+        balances[msg.sender] = initialSupply * 10**decimals;
+        totalSupply = initialSupply * 10**decimals;                        
+        name = "Rublix";                                          
+        symbol = "RBLX";
+        
+        emit Transfer(0x0, msg.sender, totalSupply);}
+
+    function transferMulti(address[] _to, uint256[] _value) public returns (bool success) {
+        require (_value.length==_to.length);
+                 
+        for(uint256 i = 0; i < _to.length; i++) {
+            require (balances[msg.sender] >= _value[i]); 
+            require (_to[i] != 0x0);       
+            super.transfer(_to[i], _value[i]);}
+            
+        return true;}
+
+    function burnFrom(uint256 _value) public returns (bool success) {
+        require(balances[msg.sender] >= _value); 
+        require (msg.sender == creator);
+    
+        address burner = msg.sender;
+       
+        balances[msg.sender] -= _value;                
+        totalSupply -= _value; 
+        emit Transfer(burner, address(0), _value);
+        emit Burn(burner, _value);
+       
+        return true;}
+}
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+contract Blueprint {
+
+    RublixToken private rblxToken;
+
+    address public source;
+
+    uint256 public internalFee;
+    uint256 public purchaseStake;
+    uint256 public rblxShortPool;
+
+    uint64 public maxNoOfShorts;
+
+    string public ticker;
+
+    uint public expirationTimestamp;
+    uint public creationTimestamp;
+
+    uint256 public margin;    
+
+    struct creatorStake {
+        address userAddress;
+        uint256 rblxStaked;
+        uint256 rblxReturned;
+    }
+    creatorStake public creator;
+
+    struct buyerStake {
+        address userAddress;
+        uint256 rblxStaked;
+        uint256 rblxReturned;
+        uint256 rblxShorted;
+    }
+    mapping (uint64 => buyerStake) public buyers;
+    mapping (address => uint64) public buyerID;
+    uint64 public noOfBuyers;
+
+    struct predictionState {
+        bool entryLevelMet;
+        bool exitLevelMet;
+        bool sequenceCorrect;
+        bool confirmed;
+    }
+    predictionState public state;
+
+    struct predictionPrices {
+        uint256 entryPrice;
+        uint256 exitPrice;
+    }
+    predictionPrices internal prediction;  
+
+    struct pricePoint {
+        uint256 value;
+        uint timestamp;
+    }
+    pricePoint public entryPrice_actual;
+    pricePoint public exitPrice_actual;
+
+    event blueprintResolved(bool predictionCorrect);
+
+    constructor (
+
+            address _creatorAddress,
+            uint256 _purchaseStake,
+            uint256 _internalFee,
+            uint64 _maxShortPositions,
+            uint256 _creationStake,
+            string _ticker,
+            uint256 _entryTkrPrice,
+            uint256 _exitTkrPrice,
+            uint _expirationTimestamp,
+            RublixToken _rblxToken) public {
+
+
+        require (_entryTkrPrice != _exitTkrPrice);
+        require (_expirationTimestamp > now);
+
+
+        source = msg.sender;
+        rblxToken = _rblxToken;
+
+        internalFee = _internalFee;
+        purchaseStake = _purchaseStake;
+
+        creator.userAddress = _creatorAddress; 
+        creator.rblxStaked = _creationStake;
+
+        ticker = _ticker;
+
+        expirationTimestamp = _expirationTimestamp;
+        creationTimestamp = now;
+
+        prediction.entryPrice = _entryTkrPrice;
+        prediction.exitPrice = _exitTkrPrice;
+
+ 
+        if (_exitTkrPrice > _entryTkrPrice) {
+            margin = (100*(_exitTkrPrice-_entryTkrPrice))/_entryTkrPrice;
+        } else {
+            margin = (100*(_entryTkrPrice-_exitTkrPrice))/_entryTkrPrice;
+        }
+
+        maxNoOfShorts = _maxShortPositions;
+        rblxShortPool = _creationStake - ((uint256(maxNoOfShorts)*purchaseStake) + internalFee);
+
     }
 
 
+    function addBuyer (address _userAddress) public returns (uint256 entry, uint256 exit) {
+        
+        require (msg.sender == source);
+        require (buyerID[_userAddress] == 0);
+        require (state.confirmed == false);
+        require (expirationTimestamp > now);
+        require (_userAddress != creator.userAddress);
 
-    //Investors can claim refunds
-    function Refund(address[] _recipient,uint256 _numberOfBetters)onlyOwner  public
-    {
-        require(token.balanceOf(this) >0);
+        noOfBuyers += 1;
+        buyerID[_userAddress] = noOfBuyers;
 
-        uint256 balance = token.balanceOf(this);
-        if(_recipient.length==0)
-        {
-                require(token.transfer(wallet, balance));
+        buyers[noOfBuyers].userAddress = _userAddress;
+        buyers[noOfBuyers].rblxStaked = purchaseStake;
+
+        if (noOfBuyers <= maxNoOfShorts) {
+            buyers[noOfBuyers].rblxShorted = purchaseStake;
         }
-        else
-        {
-            balance=balance.div(_numberOfBetters);
 
-            for(uint256 i = 0; i< _recipient.length; i++)
-            {
-                if (!isRefunded[_recipient[i]])
-                {
-                    isRefunded[_recipient[i]] = true;
-                    require(token.transfer(_recipient[i], balance));
-                    Logrefund(_recipient[i],now,balance);
+        return (prediction.entryPrice, prediction.exitPrice);
+    }
 
-                }
 
+    function shortBlueprint (address _userAddress, uint256 _rblxShort) external {
+
+        uint64 ID_ = buyerID[_userAddress];
+
+        require (msg.sender == source);
+        require (ID_ != 0);
+        require (ID_ <= maxNoOfShorts);
+        require (expirationTimestamp > now);
+        require (state.confirmed == false);
+        require (rblxShortPool >= _rblxShort);
+
+        rblxShortPool -= _rblxShort;
+        buyers[ID_].rblxShorted += _rblxShort;
+
+    }
+
+    function verifyPrediction (
+            uint256 _high, 
+            uint _highTime,
+            uint256 _low, 
+            uint _lowTime) external returns (
+            bool entryMet,
+            bool exitMet,
+            bool correctOrder,
+            bool resolved) {
+
+        require (msg.sender == source);
+        require (state.confirmed == false);
+        require (_highTime > creationTimestamp);
+        require (_lowTime > creationTimestamp);
+        require (expirationTimestamp > _highTime);
+        require (expirationTimestamp > _lowTime);
+
+
+        if ((_high == 0) && (_low == 0) && (now > expirationTimestamp)) {           
+            confirmState(false);
+        } else if (prediction.exitPrice > prediction.entryPrice) {
+
+            if (_highTime > _lowTime) { 
+                state.sequenceCorrect = true; 
             }
+            if(prediction.entryPrice > _low) { 
+                state.entryLevelMet = true; 
+                entryPrice_actual = pricePoint(_low, _lowTime);
+            }
+            if(_high > prediction.exitPrice ) { 
+                state.exitLevelMet = true; 
+                exitPrice_actual = pricePoint(_high, _highTime);
+            }
+
+        } else {
+
+            if (_lowTime > _highTime) { 
+                state.sequenceCorrect = true; 
+            }
+            if(_high > prediction.entryPrice ) { 
+                state.entryLevelMet = true; 
+                entryPrice_actual = pricePoint(_high, _highTime);
+            }
+            if(prediction.exitPrice > _low) { 
+                state.exitLevelMet = true; 
+                exitPrice_actual =  pricePoint(_low, _lowTime);
+            }
+
+        }
+
+        if ((state.entryLevelMet == true) && (state.exitLevelMet == true) && (state.sequenceCorrect == true)) {
+            confirmState(true);
+        }
+
+        return (state.entryLevelMet, state.exitLevelMet, state.sequenceCorrect, state.confirmed);
+    } 
+
+
+
+    function confirmState(bool _predictionCorrect) internal {
+
+        require (msg.sender == source);
+
+        state.confirmed = true;
+        rblxToken.transfer(source, internalFee);
+
+        emit blueprintResolved(_predictionCorrect);
+
+    }
+
+    function resetState() external {
+
+        require (msg.sender == source);
+
+        state.entryLevelMet = false;
+        state.exitLevelMet = false;
+        state.sequenceCorrect = false;
+        state.confirmed = false;
+
+        entryPrice_actual = pricePoint(0, 0);
+        exitPrice_actual =  pricePoint(0, 0);
+
+    }
+
+    function returnToBuyer ( address _userAddress) internal {
+
+        uint64 ID_ = buyerID[_userAddress];
+
+        require (ID_ !=  0); 
+        require ((state.entryLevelMet == false) || (state.exitLevelMet == false) || (state.sequenceCorrect == false));
+        require (state.confirmed == true);
+        require (buyers[ID_].rblxReturned == 0);
+
+        buyers[ID_].rblxReturned = buyers[ID_].rblxStaked + buyers[ID_].rblxShorted;
+        rblxToken.transfer(_userAddress, buyers[ID_].rblxReturned);
+    }
+
+    function returnToCreator (address _userAddress) internal {
+
+        require (_userAddress == creator.userAddress);
+        require (state.entryLevelMet == true); 
+        require (state.exitLevelMet == true);
+        require (state.sequenceCorrect == true);
+        require (state.confirmed == true);
+        require (creator.rblxReturned == 0);
+        
+        creator.rblxReturned = rblxToken.balanceOf(this);
+        rblxToken.transfer(_userAddress, creator.rblxReturned );
+    }
+
+    function returnToSource() internal {  
+   
+        require (msg.sender == source);
+        require (now > expirationTimestamp);
+        
+        rblxToken.transfer(source, rblxToken.balanceOf(this));
+    }
+
+
+    function claimTokens (address _userAddress) external {
+        
+        require (msg.sender == source);
+
+        if (_userAddress == source) {
+            returnToSource();
+        } else if (_userAddress == creator.userAddress) {
+            returnToCreator(_userAddress);
+        } else {
+            returnToBuyer(_userAddress);
         }
     }
-
-
-    function close()  onlyOwner public
-    {
-        require(token.balanceOf(this) >0);
-
-        uint256 balance = token.balanceOf(this);
-
-        require(token.transfer(wallet, balance));
-
-        Logvalutclose(wallet,balance,now);
-
-    }
-
 }
 
 
+contract BlueprintFactory {
 
+    RublixToken public rblxToken;
+    uint constant TOKEN_DECIMALS = 10**18;
 
-contract Blueprint is Ownable, usingOraclize
-{
+    address public oracle;
+    address public admin;
 
-    using SafeMath for uint256;
+    uint256 public purchaseStake;
+    uint256 public minCreationStake;
+    uint256 public maxCreationStake;
+    uint256 public internalFee;
+    uint256 public verificationFee;
 
-    // start and end timestamps where investments are allowed (both inclusive)
-    uint256 public startTime;
-    uint256 public endTime;
+    uint public minHorizon;
 
-    //ERC20 Token declarations
-    RBLXToken public token;
+    uint64 public maxShortPositions;
 
-    // decimalFactor
-    uint256 private constant decimalFactor = 10**uint256(18);
-
-   // vault used to hold tokens while Blueprint is running
-    EscrowVault public vault;
-
-   //owner amount of token to bet
-    uint256 public price;
-
-    //stores users list
-    address[] recipient;
-
-    //users count
-    uint256 numberOfBetters = 0;
-
-    struct better{
-	  RBLXToken token;
-		address sender;
-		uint256 amount;
-
-	}
-	//maintain users details
-	mapping(uint => better) betters;
-
-
-
-    mapping(address => bool) public userExist;
-    mapping(bytes32 => bool) validIds;
-
-    using strings for *;
-    uint256 public highValue;
-    uint256 public predictedValue;
-    uint256 public lowValue;
-
-    event LogPriceUpdated(string price, uint256 time);
-    event LogNewOraclizeQuery(string description);
-    event LogUserinfo(address userAddress, uint256 aomunt, uint256 time);
-
-     /**
-
-     * @param _tokenaddress is the address of the token
-     * @param _wallet for when contract owner Reached goal sending tokens to wallet
-     * @param _price for how many token to owner to bet
-     * @param _predictedValue is predicted value
-     * @param _endTime is in how many seconds will the blueprint expire from now
-     */
-
-    function Blueprint(address _tokenaddress, address _wallet, uint256 _price, uint256 _predictedValue, uint256 _endTime)public
-    payable
-     {
-        require(_tokenaddress != address(0));
-        require(_wallet != address(0));
-        require(_price != 0);
-        require(_predictedValue != 0);
-        require(_endTime >= now);
-
-        oraclize_setCustomGasPrice(5000000000 wei);
-        oraclize_setProof(proofType_TLSNotary | proofStorage_IPFS);
-
-        token = RBLXToken(_tokenaddress);
-        assert(token.balanceOf(msg.sender)>=_price);
-        vault = new EscrowVault(_wallet,token);
-        price = _price;
-        predictedValue = _predictedValue;
-        startTime = now;
-        endTime = _endTime;
-        token.sendToken(vault,_price*decimalFactor,msg.sender);
-        getPrices();
+    struct userMeta{
+        address userAddress;
+        bool userVerified;
+        uint64 noOfBlueprintsCreated;
+        uint64 noOfBlueprintsPurchased;
+        uint64 noOfBlueprintsShorted;
     }
-     /**
+    mapping (uint64 => userMeta) public users;
+    uint64 public noOfUsers;
+    mapping (address => uint64) public userID;
 
-      * @param amount Number of Tokens to Bet
-     */
-	function sendCoin(uint amount) public returns(bool)
-	{
-	    require(price == amount);
-	    assert(owner != msg.sender);
-	  	assert(endTime >= now);
-	    assert(userExist[msg.sender] == false);
-
-
-	    userExist[msg.sender]=true;
-	   	better bet = betters[numberOfBetters]; //Creates a reference bet
-        bet.token = RBLXToken(token);
-	    recipient.push(msg.sender);
-		bet.sender = msg.sender;
-	    bet.amount=amount.mul(decimalFactor);
-		bet.token.sendToken(vault, bet.amount, bet.sender);
-	    LogUserinfo(msg.sender,bet.amount,now);
-		numberOfBetters++;
-		return true;
-
-	}
-
-   // @return true
-    function hasEnded() public view returns (bool) {
-        return now > endTime;
+    struct blueprintMeta{
+        address contractAddress;
+        bool active;
+        bool correct;
+        bool verificationPrompted;
     }
-    // @return true
-     function ownergoalReached() public view returns (bool) {
-         return highValue>=predictedValue &&lowValue<=predictedValue;
+    mapping (uint64 => blueprintMeta) public blueprints;
+    uint64 public noOfBlueprints;
+    mapping (address => uint64) public blueprintID;
+
+    mapping (uint64 => mapping (uint64 => uint64)) public blueprintsPurchasedbyUser;
+    mapping (uint64 => mapping (uint64 => uint64)) public blueprintsCreatedByUser;
+    mapping (uint64 => mapping (uint64 => uint64)) public blueprintsShortedByUser;
+    
+    struct predictionPrices {
+        uint256 entryPrice;
+        uint256 exitPrice;
+    }
+    mapping (uint64 => mapping (uint64 => predictionPrices)) public predictionsAvailableToUser;
+
+    event BlueprintCreated (uint64 blueprintID);
+    event VerificationPrompted (uint64 blueprintID);
+    event BlueprintResolved (uint64 blueprintID);    
+
+    constructor (
+            address _rblxTokenAddress,
+            address _rblxOracleAddress) public {
+
+        rblxToken =  RublixToken(_rblxTokenAddress);
+
+        admin = msg.sender;
+        oracle = _rblxOracleAddress;
+
+        internalFee = 1 * TOKEN_DECIMALS;
+        verificationFee = 1 * TOKEN_DECIMALS;
+        purchaseStake = 1 * TOKEN_DECIMALS;
+
+        maxShortPositions = 9;
+
+        setMinCreationStake();
+
     }
 
+    function createBlueprint (
+            uint256 _stake,
+            string _ticker,
+            uint256 _entryTkrPrice,
+            uint256 _exitTkrPrice,
+            uint _expirationTimestamp) public payable {
 
-    function __callback(bytes32 myid, string result, bytes proof)
-    {
-        if(msg.sender != oraclize_cbAddress()) throw;
 
-        LogPriceUpdated(result,now);
-        setPrices(result);
+        uint256 creationStake_ = _stake * TOKEN_DECIMALS;
+        uint64 ID_ = userID[msg.sender];
 
-        if(ownergoalReached()){
-             vault.close();
-        } else if(hasEnded()){
-             vault.Refund(recipient,numberOfBetters);
+        require (users[ID_].userVerified == true);
+        require (_entryTkrPrice != _exitTkrPrice);
+        require (_expirationTimestamp >= now + minHorizon);
+        require (creationStake_ >= minCreationStake);
 
-        } else {
+        noOfBlueprints += 1;
 
-             if(endTime.sub(now)>86400){
-                getPrices();
+        Blueprint blueprint_ = new Blueprint(
+            msg.sender,
+            purchaseStake, 
+            internalFee,
+            maxShortPositions,
+            creationStake_,
+            _ticker,
+            _entryTkrPrice,
+            _exitTkrPrice,
+            _expirationTimestamp,
+            rblxToken);
+
+        rblxToken.transferFrom(msg.sender, address(blueprint_), creationStake_ );
+
+        blueprintID[address(blueprint_)] = noOfBlueprints;
+
+        blueprints[noOfBlueprints].contractAddress = address(blueprint_);
+        blueprints[noOfBlueprints].active = true;
+
+        users[ID_].noOfBlueprintsCreated += 1;
+        uint64 count_ = users[ID_].noOfBlueprintsCreated;
+        blueprintsCreatedByUser[ID_][count_] = noOfBlueprints;
+
+        predictionsAvailableToUser[ID_][noOfBlueprints].entryPrice = _entryTkrPrice;
+        predictionsAvailableToUser[ID_][noOfBlueprints].exitPrice = _exitTkrPrice;
+
+        emit BlueprintCreated(noOfBlueprints);
+    }
+
+
+    function purchaseBlueprint (uint64 _blueprintID) public payable {
+        
+        uint64 ID_ = userID[msg.sender];
+        address blueprintAddress_ = blueprints[_blueprintID].contractAddress;
+        Blueprint blueprint_ = Blueprint(blueprintAddress_);
+        uint256 entry_;
+        uint256 exit_;
+
+        require (users[ID_].userVerified == true);
+        require (blueprints[_blueprintID].active == true);
+
+        (entry_, exit_) = blueprint_.addBuyer(msg.sender);
+        
+        uint256 stake_ = blueprint_.purchaseStake();
+
+        rblxToken.transferFrom(msg.sender, blueprintAddress_, stake_);
+
+        users[ID_].noOfBlueprintsPurchased += 1;
+        uint64 count_ = users[ID_].noOfBlueprintsPurchased;
+        blueprintsPurchasedbyUser[ID_][count_] = _blueprintID;
+
+        predictionsAvailableToUser[ID_][_blueprintID].entryPrice = entry_;
+        predictionsAvailableToUser[ID_][_blueprintID].exitPrice = exit_;
+
+    }
+
+    function shortBlueprint (uint64 _blueprintID, uint256 _amountShort) public payable {
+        
+        uint64 ID_ = userID[msg.sender];
+        address blueprintAddress_ = blueprints[_blueprintID].contractAddress;
+        Blueprint blueprint_ = Blueprint(blueprintAddress_);
+        uint256 stake_ = _amountShort*TOKEN_DECIMALS;
+
+        require (users[ID_].userVerified == true);
+        require (blueprints[_blueprintID].active == true);
+
+        blueprint_.shortBlueprint(msg.sender, stake_);
+
+        rblxToken.transferFrom(msg.sender, blueprintAddress_, stake_ );
+         
+        users[ID_].noOfBlueprintsShorted += 1;
+        uint64 count_ = users[ID_].noOfBlueprintsShorted;
+        blueprintsShortedByUser[ID_][count_] = _blueprintID;
+    }
+
+    function promptVerification (uint64 _blueprintID) public payable {
+
+        require (users[userID[msg.sender]].userVerified == true);
+        require (blueprints[_blueprintID].active == true);
+        require (blueprints[_blueprintID].verificationPrompted == false);
+
+        blueprints[_blueprintID].verificationPrompted = true;
+
+        rblxToken.transferFrom(msg.sender, this, verificationFee);
+
+        emit VerificationPrompted(_blueprintID);
+    }
+
+    function changePurchaseStake (uint256 _parameterValue) public {
+        require (msg.sender == admin);
+        purchaseStake = _parameterValue * TOKEN_DECIMALS;
+        setMinCreationStake();
+    }
+
+    function changeInternalFee (uint256 _parameterValue) public {
+        require (msg.sender == admin);
+        internalFee = _parameterValue * TOKEN_DECIMALS;
+        setMinCreationStake();
+    }
+
+    function changeVerificationFee (uint256 _parameterValue) public {
+        require (msg.sender == admin);
+        verificationFee = _parameterValue * TOKEN_DECIMALS;
+     }
+
+    function changeMinHorizon (uint _parameterValue) public {
+        require (msg.sender == admin);
+        minHorizon = _parameterValue;
+    }
+
+    function changeMaxShortPositions (uint64 _parameterValue) public {
+        require (msg.sender == admin);
+        maxShortPositions = _parameterValue;
+        setMinCreationStake();
+    }
+
+    function changeOracleAddress (address _rblxOracleAddress) public {
+        require (msg.sender == admin);
+        oracle = _rblxOracleAddress;
+    }
+
+    function setMinCreationStake () internal {
+        require (msg.sender == admin);
+        minCreationStake = (uint256(maxShortPositions)*purchaseStake)+internalFee;
+    }
+
+    function userValidation (address[] _walletAddresses) public {
+        require (msg.sender == admin);
+
+        for(uint64 i = 0; i < _walletAddresses.length; i++ ) {
+            require (userID[_walletAddresses[i]] == 0);
+
+            noOfUsers += 1;
+            userID[_walletAddresses[i]] = noOfUsers;
+            users[noOfUsers].userAddress = _walletAddresses[i];
+            users[noOfUsers].userVerified = true;
+        }
+    }   
+
+    function userValidationRevoked (address _walletAddress) public {
+        require (msg.sender == admin);
+        require (userID[_walletAddress] > 0);
+ 
+        users[userID[_walletAddress]].userVerified = false;
+    }   
+
+    function userRevalidation (address _walletAddress) public {
+        require (msg.sender == admin);
+        require (userID[_walletAddress] > 0);
+ 
+        users[userID[_walletAddress]].userVerified = true;
+    }
+
+
+
+    function verifyBlueprint(
+            uint64 _blueprintID, 
+            uint256 _high, 
+            uint _highTime,
+            uint256 _low, 
+            uint _lowTime) public {
+
+        require (msg.sender == oracle);
+        require (blueprints[_blueprintID].active == true);
+
+        Blueprint blueprint_ =  Blueprint(blueprints[_blueprintID].contractAddress);
+
+        bool entryMet_;
+        bool exitMet_;
+        bool correctOrder_;
+        bool confirmed_;
+
+        (entryMet_, exitMet_, correctOrder_, confirmed_) = blueprint_.verifyPrediction(_high, _highTime, _low, _lowTime);
+ 
+        if (confirmed_ == true) {
+            blueprints[_blueprintID].active = false;
+
+            if ((entryMet_ == true) && (exitMet_== true) && (correctOrder_== true)){
+                blueprints[_blueprintID].correct = true;
+            } 
+            
+            emit BlueprintResolved(_blueprintID);
+        }
+
+        blueprints[_blueprintID].verificationPrompted = false;
+    }
+
+    function resetBlueprint(uint64 _blueprintID) public {
+
+        require (msg.sender == oracle);
+        require (blueprints[_blueprintID].active == false);
+
+        address blueprintAddress_ = blueprints[_blueprintID].contractAddress;
+        Blueprint blueprint_ =  Blueprint(blueprintAddress_);
+        uint256 internalFee_ = blueprint_.internalFee();
+
+
+        blueprints[_blueprintID].active = true;
+        blueprints[_blueprintID].correct = false;
+
+        rblxToken.transferFrom(msg.sender, blueprintAddress_, internalFee_);
+
+        blueprint_.resetState();
+
+    }
+
+    function claimTokens (uint64 _blueprintID) public {
+        
+        uint64 ID_ = userID[msg.sender];
+
+        require (users[ID_].userVerified == true);
+        require (blueprints[_blueprintID].active == false);
+
+        Blueprint blueprint_ =  Blueprint(blueprints[_blueprintID].contractAddress);
+
+        if (msg.sender == admin) {
+
+            if(_blueprintID == 0) {
+                rblxToken.transfer(admin, rblxToken.balanceOf(this));
             } else {
-                getupdatedPrices(endTime.sub(now));
+                blueprint_.claimTokens(this);
             }
-
-        }
-
-    }
-
-
-    function setPrices(string _result)
-    {
-        var s = _result.toSlice();
-        var delim = ",".toSlice();
-        var parts = new string[](s.count(delim) + 1);
-        for(uint i = 0; i < parts.length; i++) {
-            parts[i] = s.split(delim).toString();
-            }
-            // highvalue conver to uint256
-             highValue = parseInt(parts[1],2);
-             //lowvalue conver to uint256
-             lowValue = parseInt(parts[2],2);
-             highValue = highValue.div(100);
-             lowValue = lowValue.div(100);
-    }
-
-
-    function getPrices() payable
-    {
-        if (oraclize_getPrice("URL") > this.balance) {
-             LogNewOraclizeQuery("Oraclize query was NOT sent, please add some ETH to cover for the query fee");
+            
         } else {
-
-
-             bytes32 queryId =oraclize_query(86400,"URL", "BACwdQwK0DRrTxTZj83+5gsF/R4RQIlHwRd84MkH3Dh3uxPnNsBBWegEnCq8nw/+705Fr91prJ65tsgmQttVCmniw16KxIKYp7U0xS4ZCRuOAO+dce//7n6jJblzK10o3WwAhNz8/incFhFxwgVkC37GQfJ2aJlm/jtgNj9oHiMPtoxC43S7RTJXE57GnvqFU7pLbdCRjJRt0QPrLHYn6Ak57Scbh/ACIw8bB5QpqntRPSys5jkkK+RM0mLRFM8=",500000);
-             validIds[queryId] = true;
-
-        }
-    }
-
-
-    function getupdatedPrices(uint256 _delay) payable
-    {
-        if (oraclize_getPrice("URL") > this.balance) {
-             LogNewOraclizeQuery("Oraclize query was NOT sent, please add some ETH to cover for the query fee");
-        } else {
-
-
-             bytes32 queryId = oraclize_query(_delay,"URL", "BACwdQwK0DRrTxTZj83+5gsF/R4RQIlHwRd84MkH3Dh3uxPnNsBBWegEnCq8nw/+705Fr91prJ65tsgmQttVCmniw16KxIKYp7U0xS4ZCRuOAO+dce//7n6jJblzK10o3WwAhNz8/incFhFxwgVkC37GQfJ2aJlm/jtgNj9oHiMPtoxC43S7RTJXE57GnvqFU7pLbdCRjJRt0QPrLHYn6Ak57Scbh/ACIw8bB5QpqntRPSys5jkkK+RM0mLRFM8=",500000);
-             validIds[queryId] = true;
-
+            blueprint_.claimTokens(msg.sender);
         }
     }
 
